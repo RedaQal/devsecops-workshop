@@ -29,7 +29,8 @@ pipeline {
             }
         }
 
-        stage('SAST') {
+               stage('SAST') {
+            failFast false   // let both scanners finish so you get both reports even if one fails
             parallel {
 
                 stage('SonarQube') {
@@ -38,7 +39,9 @@ pipeline {
                             sh '''
                                 sonar-scanner \
                                   -Dsonar.host.url="$SONAR_HOST_URL" \
-                                  -Dsonar.token="$SONAR_TOKEN"
+                                  -Dsonar.token="$SONAR_TOKEN" \
+                                  -Dsonar.qualitygate.wait=true \
+                                  -Dsonar.qualitygate.timeout=300
                             '''
                         }
                     }
@@ -46,13 +49,14 @@ pipeline {
 
                 stage('Semgrep') {
                     steps {
-                        // Pas de --error pour l'instant: on observe les résultats sans bloquer le pipeline
+                        // --error makes semgrep exit with code 1 when it finds anything
                         sh '''
                             semgrep scan \
                               --config p/default \
                               --config p/nodejs \
                               --config p/owasp-top-ten \
                               --metrics=off \
+                              --error \
                               --exclude node_modules --exclude .next \
                               --json-output=semgrep-report.json \
                               --sarif-output=semgrep.sarif \
