@@ -116,3 +116,37 @@ Dependabot surveille les dépendances et ouvre automatiquement des Pull Requests
 4. Le projet utilise volontairement `next@14.2.15`, qui a des vulnérabilités connues : Dependabot proposera donc des mises à jour dès l'activation.
 
 > Dependabot fonctionne uniquement avec un dépôt GitHub. Avec GitLab ou Gitea, utiliser Renovate à la place.
+## 7. Résultats : avant / après
+
+Le pipeline est d'abord exécuté sur le code **vulnérable**, puis sur le code **corrigé**.
+
+### 7.1 Avant : code vulnérable
+
+Le build échoue au stage `SAST` : le Quality Gate SonarQube est en échec et Semgrep bloque sur ses findings. Les stages `Docker Build` et `Deploy Staging` ne sont pas exécutés.
+
+**Pipeline Jenkins**
+
+![Pipeline avant correction](docs/screenshots/before-pipeline.png)
+
+**Semgrep** : 4 findings bloquants (251 règles, 26 fichiers analysés)
+
+![Semgrep avant correction](docs/screenshots/before-semgrep.png)
+
+**SonarQube** : Quality Gate *Failed* (Security D, Reliability C)
+
+![SonarQube avant correction](docs/screenshots/before-sonar.png)
+
+### 7.2 Corrections appliquées
+
+| Vulnérabilité | Fichier | Correctif |
+|---|---|---|
+| Injection SQL (login) | `app/api/login/route.js` | Requête paramétrée (`?`) |
+| Injection SQL (recherche) | `app/api/search/route.js` | Requête paramétrée (`LIKE ?`) |
+| XSS stocké | `app/comments/page.js` | Rendu en texte (`{c.body}`), suppression de `dangerouslySetInnerHTML` |
+| Injection de commande | `app/api/ping/route.js` | Suppression de `exec`, résolution via `dns.lookup` + validation du format |
+| Path traversal | `app/api/file/route.js` | Liste blanche des fichiers du dossier autorisé |
+| Secrets en dur | `lib/config.js` | Lecture de `SESSION_SECRET` (env) ou secret aléatoire |
+| Hash MD5 | `lib/crypto.js` | `scrypt` avec sel aléatoire et comparaison à temps constant |
+| Cookie non sécurisé | `app/api/login/route.js` | `HttpOnly`, `Secure`, `SameSite=Strict`, jeton via `crypto.randomBytes` |
+| Fuite d'erreurs SQL | routes API | Message générique côté client, détail dans les logs serveur |
+

@@ -1,37 +1,47 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../lib/db';
-import { hashPassword } from '../../../lib/crypto';
+import { verifyPassword } from '../../../lib/crypto';
 import { config } from '../../../lib/config';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const { username, password } = await request.json();
-  const db = getDb();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
+  }
 
-  // VULN: injection SQL par concaténation (essayer: admin' --)
-  const query =
-    "SELECT * FROM users WHERE username = '" + username +
-    "' AND password = '" + hashPassword(password) + "'";
+  const { username, password } = body;
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
+  }
 
   try {
-    const user = db.prepare(query).get();
-    if (!user) {
+    // FIX: requête paramétrée, l'entrée utilisateur n'est jamais concaténée
+    const user = getDb().prepare('SELECT * FROM users WHERE username = ?').get(username);
+
+    if (!user || !verifyPassword(password, user.password)) {
       return NextResponse.json({ error: 'Identifiants invalides' }, { status: 401 });
     }
 
-    const signature = crypto.createHmac('sha256', config.sessionSecret).update(user.username).digest('hex');
+    const token = crypto.randomBytes(24).toString('hex'); // FIX: CSPRNG au lieu de Math.random
+    const signature = crypto.createHmac('sha256', config.sessionSecret).update(token).digest('hex');
     const res = NextResponse.json({ message: `Bienvenue ${user.username} (${user.role})` });
 
-    // VULN: cookie de session sans HttpOnly ni Secure + valeur prévisible (Math.random)
-    res.cookies.set('session', `${Math.random().toString(36).slice(2)}.${signature}`, {
-      httpOnly: false,
-      secure: false,
+    // FIX: cookie HttpOnly + Secure + SameSite
+    res.cookies.set('session', `${token}.${signature}`, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
     });
     return res;
   } catch (err) {
-    // VULN: fuite d'information, l'erreur SQL brute est renvoyée au client
-    return NextResponse.json({ error: err.message, query }, { status: 500 });
+    // FIX: l'erreur détaillée reste dans les logs serveur, le client reçoit un message générique
+    console.error('login error:', err);
+    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
   }
 }

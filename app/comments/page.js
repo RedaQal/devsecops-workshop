@@ -8,7 +8,8 @@ export default function CommentsPage() {
 
   async function load() {
     const res = await fetch('/api/comments');
-    setComments(await res.json());
+    const data = await res.json();
+    setComments(Array.isArray(data) ? data : []);
   }
   useEffect(() => { load(); }, []);
 
@@ -35,8 +36,8 @@ export default function CommentsPage() {
       {comments.map((c) => (
         <div key={c.id}>
           <strong>{c.author}</strong>
-          {/* VULN: XSS stocké, le contenu utilisateur est injecté sans échappement */}
-          <p dangerouslySetInnerHTML={{ __html: c.body }} />
+          {/* FIX: React échappe le texte, plus de dangerouslySetInnerHTML */}
+          <p>{c.body}</p>
         </div>
       ))}
     </main>
