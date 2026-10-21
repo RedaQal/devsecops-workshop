@@ -11,7 +11,7 @@ export default function CommentsPage() {
     const data = await res.json();
     setComments(Array.isArray(data) ? data : []);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -21,7 +21,7 @@ export default function CommentsPage() {
       body: JSON.stringify({ author, body }),
     });
     setBody('');
-    load();
+    void load();
   }
 
   return (

@@ -1,14 +1,17 @@
 FROM node:20-bookworm-slim
 
 WORKDIR /app
+RUN chown node:node /app
 
-COPY package*.json ./
+# L'image node fournit déjà l'utilisateur non-root "node"
+USER node
+
+COPY --chown=node:node package*.json ./
 RUN npm install
 
-COPY . .
+COPY --chown=node:node . .
 RUN npm run build
 
 EXPOSE 3000
 
-# NB: le conteneur tourne en root (volontaire, à corriger plus tard avec le scan d'image)
 CMD ["npm", "start"]

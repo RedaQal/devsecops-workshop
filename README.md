@@ -149,4 +149,5 @@ Le build échoue au stage `SAST` : le Quality Gate SonarQube est en échec et Se
 | Hash MD5 | `lib/crypto.js` | `scrypt` avec sel aléatoire et comparaison à temps constant |
 | Cookie non sécurisé | `app/api/login/route.js` | `HttpOnly`, `Secure`, `SameSite=Strict`, jeton via `crypto.randomBytes` |
 | Fuite d'erreurs SQL | routes API | Message générique côté client, détail dans les logs serveur |
+| Conteneur en root | `Dockerfile` | `USER node` (utilisateur non-root) |
 
