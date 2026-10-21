@@ -150,4 +150,21 @@ Le build échoue au stage `SAST` : le Quality Gate SonarQube est en échec et Se
 | Cookie non sécurisé | `app/api/login/route.js` | `HttpOnly`, `Secure`, `SameSite=Strict`, jeton via `crypto.randomBytes` |
 | Fuite d'erreurs SQL | routes API | Message générique côté client, détail dans les logs serveur |
 | Conteneur en root | `Dockerfile` | `USER node` (utilisateur non-root) |
+**Pipeline Jenkins**
+
+![Pipeline après correction](docs/screenshots/after-pipeline.png)
+
+**Semgrep** : 0 finding
+
+![Semgrep après correction](docs/screenshots/after-semgrep.png)
+
+**SonarQube** : Quality Gate *Passed*
+
+![SonarQube après correction](docs/screenshots/after-sonar.png)
+
+| | Avant | Après |
+|---|---|---|
+| Semgrep | 4 findings (bloquant) | 0 finding |
+| SonarQube | Gate *Failed* (Security D, Reliability C) | Gate *Passed* |
+| Pipeline | Échec au stage SAST | Succès, staging déployé |
 
